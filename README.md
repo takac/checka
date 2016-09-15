@@ -11,10 +11,18 @@ If type annotations are successfully provided throughout the project then
 `mypy` and other analysis tools can become very powerful additions to
 your project.
 
+## Install
+```bash
+git clone https://github.com/takac/checka
+cd checka
+pip install -e .
+```
+
 ## Usage
 ```bash
-python3 -m checkannotations.checkannotations mymodule
+checka mymodule/mydir
 ```
+
 Output:
 ```text
 madeup/path.py:1 Missing annotation from function: "mocked.fn_def_args" for argument "y"

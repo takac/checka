@@ -1,4 +1,4 @@
-from distutils.core import setup
+from setuptools import setup
 
 setup(
     name='checkannotations',
@@ -7,4 +7,9 @@ setup(
     author='Tom Cammann',
     author_email='tom.cammann@hpe.com',
     packages=['checkannotations'],
+    entry_points={
+    'console_scripts': [
+        'checka = checkannotations.checkannotations:main',
+    ],
+},
 )

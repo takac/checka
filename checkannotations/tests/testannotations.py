@@ -8,43 +8,43 @@ def ast_from_doc(func):
     @wraps(func)
     def func_wrapper(self):
         tree = ast.parse(func.__doc__)
-        attrs = {'__file__': 'madeup/path.py', '__name__': 'mocked'}
-        self.mod = type('', (object,), attrs)()
         self.fun = tree.body[0]
-        self.checker.check_fn_annotations(self.mod, self.fun)
+        self.file_path = 'madeup/path.py'
+        self.violations = list(
+            checkannotations.check_fn_annotations(self.file_path, self.fun))
         return func(self)
     return func_wrapper
 
 
 class TestCheckAnnotations(unittest.TestCase):
 
-    def setUp(self):
-        self.checker = checkannotations.CheckFunction()
-
     def assertReturnViolation(self):
-        self.assertIn({'function': self.fun, 'node': self.fun,
-                       'mod': self.mod, 'type': 'return'},
-                      self.checker.violations)
+        self.assertIn({'scope': self.fun.name, 'node': self.fun,
+                       'file_path': self.file_path,
+                       'line_no': self.fun.lineno, 'type': 'return',
+                       'name': 'return'}, self.violations)
 
     def assertArgViolation(self, arg_no):
-        self.assertIn({'function': self.fun,
+        self.assertIn({'scope': self.fun.name,
                        'node': self.fun.args.args[arg_no],
-                       'mod': self.mod, 'type': 'arg'},
-                      self.checker.violations)
+                       'file_path': self.file_path, 'type': 'argument',
+                       'name': self.fun.args.args[arg_no].arg,
+                       'line_no': self.fun.args.args[arg_no].lineno},
+                      self.violations)
 
     @ast_from_doc
     def test_check_fn_annotations_ok(self):
         """def annotated_fun(x: int) -> int:
             return x
         """
-        self.assertEqual(self.checker.violations, [])
+        self.assertEqual(self.violations, [])
 
     @ast_from_doc
     def test_check_multi_fn_args_annotations_missing(self):
         """def annotated_fun(x) -> int:
             return x
         """
-        self.assertEqual(len(self.checker.violations), 1)
+        self.assertEqual(len(self.violations), 1)
         self.assertArgViolation(0)
 
     @ast_from_doc
@@ -52,7 +52,7 @@ class TestCheckAnnotations(unittest.TestCase):
         """def annotated_fun(x: int, y, z: str, w) -> int:
             return x
         """
-        self.assertEqual(len(self.checker.violations), 2)
+        self.assertEqual(len(self.violations), 2)
         self.assertArgViolation(1)
         self.assertArgViolation(3)
 
@@ -61,7 +61,7 @@ class TestCheckAnnotations(unittest.TestCase):
         """def annotated_fun(x, y) -> int:
             return x*y
         """
-        self.assertEqual(len(self.checker.violations), 2)
+        self.assertEqual(len(self.violations), 2)
         self.assertArgViolation(0)
         self.assertArgViolation(1)
 
@@ -70,7 +70,7 @@ class TestCheckAnnotations(unittest.TestCase):
         """def missing_return_annotation(x: int, y: int):
             return x*y
         """
-        self.assertEqual(len(self.checker.violations), 1)
+        self.assertEqual(len(self.violations), 1)
         self.assertReturnViolation()
 
     @ast_from_doc
@@ -78,7 +78,7 @@ class TestCheckAnnotations(unittest.TestCase):
         """def fn_def_args(x=1, y=2) -> int:
             return x*y
         """
-        self.assertEqual(len(self.checker.violations), 2)
+        self.assertEqual(len(self.violations), 2)
         self.assertArgViolation(0)
         self.assertArgViolation(1)
 
@@ -87,5 +87,5 @@ class TestCheckAnnotations(unittest.TestCase):
         """def fn_def_args(self, y=2) -> int:
             return x*y
         """
-        self.assertEqual(len(self.checker.violations), 1)
+        self.assertEqual(len(self.violations), 1)
         self.assertArgViolation(1)
